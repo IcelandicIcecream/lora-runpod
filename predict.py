@@ -81,9 +81,6 @@ VAE_ID = "stabilityai/sd-vae-ft-mse"
 VAE_CACHE = "diffusers-vae-cache"
 VAE_PATH = f"{VAE_CACHE}/{VAE_ID}"
 
-HUGGING_FACE_TOKEN = "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"
-
-
 class Predictor(BasePredictor):
     def setup(self):
         download_weights.load_model(MODEL_ID,MODEL_CACHE,VAE_ID,VAE_CACHE)
