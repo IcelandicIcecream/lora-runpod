@@ -1,11 +1,12 @@
 import os
 import shutil
 import mimetypes
+import io
 import re
+import requests
 from zipfile import ZipFile
 
 from cog import Path
-
 
 def clean_directory(path):
     if os.path.exists(path):
@@ -21,10 +22,16 @@ def clean_directories(paths):
 def random_seed():
     return int.from_bytes(os.urandom(2), "big")
 
-
 def extract_zip_and_flatten(zip_path, output_path):
     # extract zip contents, flattening any paths present within it
-    with ZipFile(str(zip_path), "r") as zip_ref:
+    if not os.path.exists(zip_path):
+        r = requests.get(zip_path)
+        uploaded_zip = ZipFile(io.BytesIO(r.content))
+        read_zip = uploaded_zip
+    else:
+        read_zip = ZipFile(str(zip_path), "r")
+
+    with read_zip as zip_ref:
         for zip_info in zip_ref.infolist():
             if zip_info.filename[-1] == "/" or zip_info.filename.startswith(
                 "__MACOSX"

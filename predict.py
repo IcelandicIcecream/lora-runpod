@@ -1,7 +1,17 @@
 import gc
 import torch
+import os
+import download_weights
 from cog import BasePredictor, Input, Path
 from lora_diffusion.cli_lora_pti import train as lora_train
+from transformers import CLIPTextModel, CLIPTokenizer
+from diffusers import (
+    AutoencoderKL,
+    DDIMScheduler,
+    DDPMScheduler,
+    StableDiffusionPipeline,
+    UNet2DConditionModel,
+)
 
 from common import (
     random_seed,
@@ -9,7 +19,6 @@ from common import (
     extract_zip_and_flatten,
     get_output_filename,
 )
-
 
 COMMON_PARAMETERS = {
     "train_text_encoder": True,
@@ -65,8 +74,20 @@ TASK_PARAMETERS = {
     "style": STYLE_PARAMETERS,
 }
 
+MODEL_ID = "SG161222/Realistic_Vision_V1.4_Fantasy.ai"
+MODEL_CACHE = "diffusers-rv14-cache"
+MODEL_PATH = f"{MODEL_CACHE}/{MODEL_ID}"
+VAE_ID = "stabilityai/sd-vae-ft-mse"
+VAE_CACHE = "diffusers-vae-cache"
+VAE_PATH = f"{VAE_CACHE}/{VAE_ID}"
+
+HUGGING_FACE_TOKEN = "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"
+
 
 class Predictor(BasePredictor):
+    def setup(self):
+        download_weights.load_model(MODEL_ID,MODEL_CACHE,VAE_ID,VAE_CACHE)
+    
     def predict(
         self,
         instance_data: Path = Input(
@@ -83,7 +104,11 @@ class Predictor(BasePredictor):
             " resolution.",
             default=512,
         ),
-    ) -> Path:
+        placeholder_tokens: str = Input(
+            description="The placeholder tokens for the subject",
+            default="<s1>|<s2>",
+        ),
+        ) -> Path:
         if seed is None:
             seed = random_seed()
         print(f"Using seed: {seed}")
@@ -96,11 +121,12 @@ class Predictor(BasePredictor):
         params.update(COMMON_PARAMETERS)
         params.update(
             {
-                "pretrained_model_name_or_path": "./stable-diffusion-v1-5-cache",
+                "pretrained_model_name_or_path": MODEL_PATH,
                 "instance_data_dir": cog_instance_data,
                 "output_dir": cog_output_dir,
                 "resolution": resolution,
                 "seed": seed,
+                "placeholder_tokens": placeholder_tokens,
             }
         )
 
